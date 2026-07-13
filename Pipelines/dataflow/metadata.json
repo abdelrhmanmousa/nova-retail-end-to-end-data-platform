@@ -1,0 +1,27 @@
+{
+  "name": "nova-retail-clickstream-pipeline",
+  "description": "Streams clickstream events from Pub/Sub to Hive-partitioned Parquet in GCS",
+  "parameters": [
+    {
+      "name": "input_subscription",
+      "label": "Pub/Sub subscription",
+      "helpText": "Full subscription path, e.g. projects/PROJECT/subscriptions/clickstream-events-dataflow-sub"
+    },
+    {
+      "name": "output_path",
+      "label": "GCS output path",
+      "helpText": "GCS prefix for Parquet output, e.g. gs://BUCKET/clickstream"
+    },
+    {
+      "name": "dead_letter_path",
+      "label": "GCS dead-letter path",
+      "helpText": "GCS prefix for malformed/invalid records, e.g. gs://BUCKET/clickstream_dead_letter"
+    },
+    {
+      "name": "window_size_minutes",
+      "label": "Window size (minutes)",
+      "helpText": "Size of the fixed window used to batch records into Parquet files",
+      "isOptional": true
+    }
+  ]
+}
