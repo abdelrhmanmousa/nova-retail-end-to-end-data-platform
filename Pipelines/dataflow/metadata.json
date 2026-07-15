@@ -22,6 +22,12 @@
       "label": "Window size (minutes)",
       "helpText": "Size of the fixed window used to batch records into Parquet files",
       "isOptional": true
+    },
+    {
+      "name": "sdk_container_image",
+      "label": "Worker Docker Image",
+      "helpText": "The custom Docker image to use for workers",
+      "isOptional": true
     }
   ]
 }
