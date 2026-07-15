@@ -1,3 +1,6 @@
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import json
 
 from apache_beam.io.fileio import TextSink
@@ -14,8 +17,9 @@ from schema import CLICKSTREAM_SCHEMA
 from parquet_sink import ParquetFileSink
 
 
-def run():
-    pipeline_options = PipelineOptions()
+def run(argv=None):
+    # Pass argv to PipelineOptions so it sees the --parameters from gcloud
+    pipeline_options = PipelineOptions(argv) 
     pipeline_options.view_as(StandardOptions).streaming = True
     pipeline_options.view_as(SetupOptions).save_main_session = True
     custom_options = pipeline_options.view_as(ClickstreamPipelineOptions)
