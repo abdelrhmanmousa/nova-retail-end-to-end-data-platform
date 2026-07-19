@@ -31,6 +31,7 @@ gcloud services enable \
   datastream.googleapis.com \
   artifactregistry.googleapis.com \
   composer.googleapis.com \
+  container.googleapis.com \
   cloudbuild.googleapis.com \
   dataflow.googleapis.com \
   dataplex.googleapis.com \
