@@ -1,0 +1,10 @@
+dbt_nova_retail:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: project-19093238-3ff7-407b-9e3
+      dataset: nova_retail_curated
+      location: us-central1
+      threads: 4

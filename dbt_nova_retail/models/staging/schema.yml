@@ -1,0 +1,92 @@
+version: 2
+
+models:
+  - name: stg_customers
+    description: "Cleaned customer profile data from Datastream CDC"
+    columns:
+      - name: customer_id
+        tests:
+          - unique
+          - not_null
+      - name: email
+        tests:
+          - not_null
+
+  - name: stg_products
+    description: "Cleaned product catalog data from Datastream CDC"
+    columns:
+      - name: product_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_orders
+    description: "Cleaned order data from Datastream CDC"
+    columns:
+      - name: order_id
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        tests:
+          - not_null
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['completed', 'shipped', 'processing', 'cancelled', 'returned']
+
+  - name: stg_order_items
+    description: "Cleaned order line items from Datastream CDC"
+    columns:
+      - name: order_item_id
+        tests:
+          - unique
+          - not_null
+      - name: order_id
+        tests:
+          - not_null
+      - name: product_id
+        tests:
+          - not_null
+      - name: quantity
+        tests:
+          - not_null
+
+  - name: stg_payments
+    description: "Cleaned payment data from Datastream CDC"
+    columns:
+      - name: payment_id
+        tests:
+          - unique
+          - not_null
+      - name: order_id
+        tests:
+          - not_null
+
+  - name: stg_clickstream_events
+    description: "Cleaned clickstream events landed via Dataflow to GCS"
+    columns:
+      - name: event_id
+        tests:
+          - unique
+          - not_null
+      - name: event_type
+        tests:
+          - accepted_values:
+              values: ['page_view', 'add_to_cart', 'checkout', 'purchase']
+
+  - name: stg_supplier_catalog
+    description: "Latest supplier catalog snapshot per product"
+    columns:
+      - name: product_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_currency_rates
+    description: "Latest currency exchange rate snapshot per currency"
+    columns:
+      - name: currency_code
+        tests:
+          - unique
+          - not_null

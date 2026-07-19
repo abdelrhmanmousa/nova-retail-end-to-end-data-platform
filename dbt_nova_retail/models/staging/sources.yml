@@ -1,0 +1,53 @@
+version: 2
+
+sources:
+  - name: datastream_cdc
+    database: "{{ target.project }}"
+    schema: nova_retail_staging_public
+    tables:
+      - name: customers
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+        loaded_at_field: signup_date
+
+      - name: products
+
+      - name: orders
+        freshness:
+          warn_after: {count: 2, period: hour}
+          error_after: {count: 6, period: hour}
+        loaded_at_field: order_ts
+
+      - name: order_items
+
+      - name: payments
+        freshness:
+          warn_after: {count: 2, period: hour}
+          error_after: {count: 6, period: hour}
+        loaded_at_field: paid_ts
+
+  - name: raw_files
+    database: "{{ target.project }}"
+    schema: nova_retail_staging
+    tables:
+      - name: clickstream_events
+        description: "Real-time clickstream from Pub/Sub via Dataflow"
+        # NOTE: no freshness check here yet - the `timestamp` column in this
+        # external table is stored as STRING (see the pyarrow schema in the
+        # Dataflow pipeline), and dbt's freshness check requires a native
+        # TIMESTAMP/DATETIME column to do date-math against. Fix properly by
+        # changing the Parquet schema to write timestamp as pa.timestamp('us')
+        # instead of pa.string(), then re-add freshness here.
+
+      - name: supplier_catalog
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+        loaded_at_field: updated_at
+
+      - name: currency_rates
+        freshness:
+          warn_after: {count: 24, period: hour}
+          error_after: {count: 48, period: hour}
+        loaded_at_field: fetched_at
