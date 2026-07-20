@@ -65,8 +65,7 @@ steps:
       - 'TF_VAR_cloudsql_instance_connection_name=$_CLOUDSQL_CONNECTION'
       - 'TF_VAR_cloudsql_public_ip=$_CLOUDSQL_IP'
       - 'TF_VAR_cloudsql_password=$_CLOUDSQL_PASSWORD'
-      # Add any other variables your variables.tf file requires:
-      # - 'TF_VAR_bucket_name=my-bucket-name'
+      
 substitutions:
   _CLICKSTREAM_IMAGE: 'us-central1-docker.pkg.dev/${PROJECT_ID}/nova-retail-pipelines/clickstream-pipeline:latest'
   _BATCH_IMAGE: 'us-central1-docker.pkg.dev/${PROJECT_ID}/nova-retail-pipelines/batch-producers:latest'
