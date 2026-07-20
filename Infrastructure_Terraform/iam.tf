@@ -174,36 +174,43 @@ resource "google_project_iam_member" "datastream_bq_job_user" {
 }
 
 
-# --- Additions for CI/CD: cloud_build_deployer needs more than just
-# artifactregistry.writer now, since cloudbuild.yaml has it do a lot more
-# than push one image. ---
+# --- CI/CD permissions for cloud_build_deployer ---
+#
+# Note: cloudbuild-deploy.yaml builds images DIRECTLY (docker build/push),
+# not via nested `gcloud builds submit` calls. That means we do NOT need
+# roles/cloudbuild.builds.editor (create nested builds) or broad
+# roles/storage.admin (upload to Cloud Build's internal staging bucket) -
+# both were only required by the nested-build approach and have been
+# removed. artifactregistry.writer (already granted earlier) is all
+# that's needed to push images directly.
 
-# Broad read access is required for `terraform plan` to describe existing
-# resources across BigQuery, Pub/Sub, Datastream, Composer, etc. This is a
-# deliberate, scoped trade-off: Viewer is read-only (cannot create/modify/
-# delete anything), which is why it's acceptable even though it's broad -
-# the alternative is hand-picking a dozen individual *.viewer roles across
-# every service this project touches, for no real security gain over the
-# built-in read-only role.
+# Required for `terraform plan` to read existing resource state across
+# BigQuery, Pub/Sub, Datastream, Composer, etc.
 resource "google_project_iam_member" "cloud_build_deployer_viewer" {
   project = var.project_id
   role    = "roles/viewer"
   member  = "serviceAccount:${google_service_account.cloud_build_deployer.email}"
 }
 
-# Needed because cloudbuild.yaml's build steps call `gcloud builds submit`
-# themselves (reusing the same scripts you run locally) - that's a build
-# triggering a nested build, which requires this role on the outer build's
-# service account.
-resource "google_project_iam_member" "cloud_build_deployer_builds_editor" {
+# dbt test (in cloudbuild-test.yaml) executes real queries against
+# BigQuery - roles/viewer alone covers reading data/metadata but not
+# running query jobs.
+resource "google_project_iam_member" "cloud_build_deployer_bq_job_user" {
   project = var.project_id
-  role    = "roles/cloudbuild.builds.editor"
+  role    = "roles/bigquery.jobUser"
   member  = "serviceAccount:${google_service_account.cloud_build_deployer.email}"
 }
 
-# Composer creates its own DAG bucket outside of Terraform's control (only
-# its name is knowable via the dag_gcs_prefix output), so this needs a
-# separate explicit grant, same pattern as the Datastream-created dataset.
+# Without this, builds can't write their own logs to Cloud Logging.
+resource "google_project_iam_member" "cloud_build_deployer_log_writer" {
+  project = var.project_id
+  role    = "roles/logging.logWriter"
+  member  = "serviceAccount:${google_service_account.cloud_build_deployer.email}"
+}
+
+# Composer creates its own DAG bucket outside Terraform's control (only
+# its name is knowable via the dag_gcs_prefix output) - needs an explicit,
+# narrowly-scoped grant on just that bucket.
 locals {
   composer_dag_bucket_name = replace(
     replace(google_composer_environment.batch_orchestrator.config[0].dag_gcs_prefix, "gs://", ""),
@@ -215,21 +222,4 @@ resource "google_storage_bucket_iam_member" "cloud_build_deployer_dag_bucket" {
   bucket = local.composer_dag_bucket_name
   role   = "roles/storage.objectAdmin"
   member = "serviceAccount:${google_service_account.cloud_build_deployer.email}"
-}
-
-# roles/viewer (granted above) covers reading BigQuery data/metadata, but
-# NOT running query jobs - dbt test actually executes queries against
-# BigQuery, which needs this explicitly.
-resource "google_project_iam_member" "cloud_build_deployer_bq_job_user" {
-  project = var.project_id
-  role    = "roles/bigquery.jobUser"
-  member  = "serviceAccount:${google_service_account.cloud_build_deployer.email}"
-}
-
-# Without this, the build can't write its own logs to Cloud Logging - which
-# also means step failures show no output, making them impossible to debug.
-resource "google_project_iam_member" "cloud_build_deployer_log_writer" {
-  project = var.project_id
-  role    = "roles/logging.logWriter"
-  member  = "serviceAccount:${google_service_account.cloud_build_deployer.email}"
 }

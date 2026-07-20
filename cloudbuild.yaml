@@ -1,33 +1,54 @@
-# Cloud Build pipeline for Nova Retail.
-# Triggered on push to main. Reuses the exact same scripts you already run
-# manually (single source of truth - no duplicated build logic between
-# local dev and CI), then syncs DAGs and runs a Terraform plan for review.
-#
-# Deliberately does NOT run `terraform apply` automatically - see README
-# note in Infrastructure_Terraform/ for why. Infra changes stay a manual,
-# reviewed step even with CI/CD in place elsewhere.
+# Cloud Build pipeline for Nova Retail - deploy stage.
+# Triggered on push to main. Builds images DIRECTLY (docker build/push),
+# no nested `gcloud builds submit` calls - faster, fewer permissions
+# needed, and logs stay in one place per step.
 
 steps:
-  - id: build-clickstream-pipeline
+  # --- Clickstream Dataflow Flex Template image ---
+  - id: build-clickstream-image
+    name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', '${_CLICKSTREAM_IMAGE}', 'Pipelines/dataflow']
+
+  - id: push-clickstream-image
+    name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_CLICKSTREAM_IMAGE}']
+
+  - id: register-clickstream-template
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: bash
-    args: ['./scripts/build_template.sh', '${PROJECT_ID}', 'us-central1']
+    args:
+      - -c
+      - |
+        gcloud dataflow flex-template build "${_TEMPLATE_GCS_PATH}" \
+          --image "${_CLICKSTREAM_IMAGE}" \
+          --sdk-language PYTHON \
+          --metadata-file Pipelines/dataflow/metadata.json
 
-  - id: build-batch-producers
-    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: bash
-    args: ['./data_sources/build_and_push_batch.sh', '${PROJECT_ID}', 'us-central1']
+  # --- Batch producers image ---
+  - id: build-batch-producers-image
+    name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-f', 'data_sources/Dockerfile.batch', '-t', '${_BATCH_IMAGE}', 'data_sources']
 
+  - id: push-batch-producers-image
+    name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_BATCH_IMAGE}']
+
+  # --- dbt image ---
   - id: build-dbt-image
-    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: bash
-    args: ['./dbt_nova_retail/build_and_push.sh', '${PROJECT_ID}', 'us-central1']
+    name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', '${_DBT_IMAGE}', 'dbt_nova_retail']
 
+  - id: push-dbt-image
+    name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_DBT_IMAGE}']
+
+  # --- Deploy DAGs ---
   - id: sync-dags
     name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gsutil
     args: ['-m', 'rsync', '-r', './dags', '${_COMPOSER_DAG_BUCKET}']
 
+  # --- Infra review (plan only, never auto-apply) ---
   - id: terraform-plan
     name: 'hashicorp/terraform:1.9'
     dir: 'Infrastructure_Terraform'
@@ -39,6 +60,10 @@ steps:
         terraform plan -input=false -var-file=terraform.tfvars
 
 substitutions:
+  _CLICKSTREAM_IMAGE: 'us-central1-docker.pkg.dev/${PROJECT_ID}/nova-retail-pipelines/clickstream-pipeline:latest'
+  _BATCH_IMAGE: 'us-central1-docker.pkg.dev/${PROJECT_ID}/nova-retail-pipelines/batch-producers:latest'
+  _DBT_IMAGE: 'us-central1-docker.pkg.dev/${PROJECT_ID}/nova-retail-pipelines/dbt-nova-retail:latest'
+  _TEMPLATE_GCS_PATH: 'gs://${PROJECT_ID}-pipeline-artifacts-dev/templates/clickstream-pipeline.json'
   _COMPOSER_DAG_BUCKET: 'gs://us-central1-nova-retail-orc-7cf14dd9-bucket/dags'
 
 options:
