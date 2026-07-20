@@ -1,0 +1,47 @@
+# Cloud Build pipeline for Nova Retail.
+# Triggered on push to main. Reuses the exact same scripts you already run
+# manually (single source of truth - no duplicated build logic between
+# local dev and CI), then syncs DAGs and runs a Terraform plan for review.
+#
+# Deliberately does NOT run `terraform apply` automatically - see README
+# note in Infrastructure_Terraform/ for why. Infra changes stay a manual,
+# reviewed step even with CI/CD in place elsewhere.
+
+steps:
+  - id: build-clickstream-pipeline
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: bash
+    args: ['./scripts/build_template.sh', '${PROJECT_ID}', 'us-central1']
+
+  - id: build-batch-producers
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: bash
+    args: ['./data_sources/build_and_push_batch.sh', '${PROJECT_ID}', 'us-central1']
+
+  - id: build-dbt-image
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: bash
+    args: ['./dbt_nova_retail/build_and_push.sh', '${PROJECT_ID}', 'us-central1']
+
+  - id: sync-dags
+    name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gsutil
+    args: ['-m', 'rsync', '-r', './dags', '${_COMPOSER_DAG_BUCKET}']
+
+  - id: terraform-plan
+    name: 'hashicorp/terraform:1.9'
+    dir: 'Infrastructure_Terraform'
+    entrypoint: sh
+    args:
+      - -c
+      - |
+        terraform init -input=false
+        terraform plan -input=false -var-file=terraform.tfvars
+
+substitutions:
+  _COMPOSER_DAG_BUCKET: 'gs://us-central1-nova-retail-orc-7cf14dd9-bucket/dags'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+timeout: 1800s
