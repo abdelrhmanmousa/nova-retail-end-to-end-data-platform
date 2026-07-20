@@ -172,3 +172,64 @@ resource "google_project_iam_member" "datastream_bq_job_user" {
   role    = "roles/bigquery.jobUser"
   member  = "serviceAccount:${google_project_service_identity.datastream_sa.email}"
 }
+
+
+# --- Additions for CI/CD: cloud_build_deployer needs more than just
+# artifactregistry.writer now, since cloudbuild.yaml has it do a lot more
+# than push one image. ---
+
+# Broad read access is required for `terraform plan` to describe existing
+# resources across BigQuery, Pub/Sub, Datastream, Composer, etc. This is a
+# deliberate, scoped trade-off: Viewer is read-only (cannot create/modify/
+# delete anything), which is why it's acceptable even though it's broad -
+# the alternative is hand-picking a dozen individual *.viewer roles across
+# every service this project touches, for no real security gain over the
+# built-in read-only role.
+resource "google_project_iam_member" "cloud_build_deployer_viewer" {
+  project = var.project_id
+  role    = "roles/viewer"
+  member  = "serviceAccount:${google_service_account.cloud_build_deployer.email}"
+}
+
+# Needed because cloudbuild.yaml's build steps call `gcloud builds submit`
+# themselves (reusing the same scripts you run locally) - that's a build
+# triggering a nested build, which requires this role on the outer build's
+# service account.
+resource "google_project_iam_member" "cloud_build_deployer_builds_editor" {
+  project = var.project_id
+  role    = "roles/cloudbuild.builds.editor"
+  member  = "serviceAccount:${google_service_account.cloud_build_deployer.email}"
+}
+
+# Composer creates its own DAG bucket outside of Terraform's control (only
+# its name is knowable via the dag_gcs_prefix output), so this needs a
+# separate explicit grant, same pattern as the Datastream-created dataset.
+locals {
+  composer_dag_bucket_name = replace(
+    replace(google_composer_environment.batch_orchestrator.config[0].dag_gcs_prefix, "gs://", ""),
+    "/dags", ""
+  )
+}
+
+resource "google_storage_bucket_iam_member" "cloud_build_deployer_dag_bucket" {
+  bucket = local.composer_dag_bucket_name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.cloud_build_deployer.email}"
+}
+
+# roles/viewer (granted above) covers reading BigQuery data/metadata, but
+# NOT running query jobs - dbt test actually executes queries against
+# BigQuery, which needs this explicitly.
+resource "google_project_iam_member" "cloud_build_deployer_bq_job_user" {
+  project = var.project_id
+  role    = "roles/bigquery.jobUser"
+  member  = "serviceAccount:${google_service_account.cloud_build_deployer.email}"
+}
+
+# Without this, the build can't write its own logs to Cloud Logging - which
+# also means step failures show no output, making them impossible to debug.
+resource "google_project_iam_member" "cloud_build_deployer_log_writer" {
+  project = var.project_id
+  role    = "roles/logging.logWriter"
+  member  = "serviceAccount:${google_service_account.cloud_build_deployer.email}"
+}
