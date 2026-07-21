@@ -57,7 +57,7 @@ steps:
       - -c
       - |
         terraform init -input=false
-        terraform plan -input=false -var-file=terraform.tfvars
+        terraform plan -input=false 
     env:
       # These map Cloud Build variables to Terraform variables
       - 'TF_VAR_project_id=$PROJECT_ID'
