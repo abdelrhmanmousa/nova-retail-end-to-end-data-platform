@@ -5,3 +5,4 @@ select
     country,
     signup_date
 from {{ source('datastream_cdc', 'customers') }}
+-- another test
