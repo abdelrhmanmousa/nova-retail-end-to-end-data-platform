@@ -11,8 +11,8 @@ steps:
       - -c
       - |
         pip install --no-cache-dir dbt-bigquery==1.8.2
-        mkdir -p /root/.dbt && cp profiles.yml /root/.dbt/profiles.yml
-        dbt deps --profiles-dir /root/.dbt
+       
+        dbt deps --profiles-dir .
 
   - id: dbt-compile
     name: 'python:3.11-slim'
@@ -22,7 +22,8 @@ steps:
       - -c
       - |
         pip install --no-cache-dir dbt-bigquery==1.8.2
-        dbt compile --profiles-dir /root/.dbt
+       
+        dbt compile --profiles-dir .
 
   - id: dbt-test
     name: 'python:3.11-slim'
@@ -32,7 +33,7 @@ steps:
       - -c
       - |
         pip install --no-cache-dir dbt-bigquery==1.8.2
-        dbt test --profiles-dir /root/.dbt
+        dbt test --profiles-dir .
 
 options:
   logging: CLOUD_LOGGING_ONLY
