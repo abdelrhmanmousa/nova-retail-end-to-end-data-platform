@@ -2,8 +2,10 @@ resource "google_bigquery_table" "clickstream_external" {
   dataset_id          = google_bigquery_dataset.staging.dataset_id
   table_id            = "clickstream_events"
   deletion_protection = false
-
+  max_staleness = "0-0 0 1:0:0"
   external_data_configuration {
+    connection_id = google_bigquery_connection.biglake.name
+    metadata_cache_mode   = "AUTOMATIC" 
     autodetect    = true
     source_format = "PARQUET"
     source_uris   = ["gs://${google_storage_bucket.raw_zone.name}/clickstream/*"]
@@ -18,8 +20,11 @@ resource "google_bigquery_table" "supplier_catalog_external" {
   dataset_id          = google_bigquery_dataset.staging.dataset_id
   table_id            = "supplier_catalog"
   deletion_protection = false
+  max_staleness = "0-0 0 1:0:0"  # Cache metadata for 1 hour for better performance
 
   external_data_configuration {
+    connection_id = google_bigquery_connection.biglake.name
+    metadata_cache_mode   = "AUTOMATIC" 
     source_format = "CSV"
     source_uris   = ["gs://${google_storage_bucket.raw_zone.name}/supplier_catalog/*"]
     autodetect    = true
@@ -40,8 +45,11 @@ resource "google_bigquery_table" "currency_rates_external" {
   dataset_id          = google_bigquery_dataset.staging.dataset_id
   table_id            = "currency_rates"
   deletion_protection = false
+  max_staleness = "0-0 0 1:0:0"  # Cache metadata for 1 hour for better performance
 
   external_data_configuration {
+    connection_id = google_bigquery_connection.biglake.name
+    metadata_cache_mode   = "AUTOMATIC" 
     source_format = "CSV"
     source_uris   = ["gs://${google_storage_bucket.raw_zone.name}/currency_rates/*"]
     autodetect    = true

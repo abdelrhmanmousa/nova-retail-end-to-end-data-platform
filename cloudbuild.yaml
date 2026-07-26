@@ -65,6 +65,13 @@ steps:
       - 'TF_VAR_cloudsql_instance_connection_name=$_CLOUDSQL_CONNECTION'
       - 'TF_VAR_cloudsql_public_ip=$_CLOUDSQL_IP'
       - 'TF_VAR_cloudsql_password=$_CLOUDSQL_PASSWORD'
+      secretEnv: ['TF_VAR_cloudsql_password']
+
+# ADD THIS AT THE BOTTOM OF THE FILE:
+availableSecrets:
+  secretManager:
+    - versionName: projects/project-19093238-3ff7-407b-9e3/secrets/cloudsql-datastream-password/versions/latest
+      env: 'TF_VAR_cloudsql_password'
       
 substitutions:
   _CLICKSTREAM_IMAGE: 'us-central1-docker.pkg.dev/${PROJECT_ID}/nova-retail-pipelines/clickstream-pipeline:latest'
