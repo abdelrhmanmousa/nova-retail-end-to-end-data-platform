@@ -4,7 +4,24 @@ A production-style data platform simulating an online retail business, built to
 demonstrate batch and streaming ingestion, CDC, orchestration, transformation,
 CI/CD, monitoring, and governance — all provisioned as infrastructure as code.
 
-## Architecture
+## 🛠 Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Infrastructure as Code** | ![Terraform](https://img.shields.io/badge/terraform-%235835CC.svg?style=for-the-badge&logo=terraform&logoColor=white) |
+| **Streaming** | ![Apache Beam](https://img.shields.io/badge/apache_beam-%2329B5E8.svg?style=for-the-badge&logo=apachebeam&logoColor=white) ![Google Cloud](https://img.shields.io/badge/Pub/Sub-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white) |
+| **Database CDC** | ![PostgreSQL](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white) ![Google Cloud](https://img.shields.io/badge/Cloud_SQL-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white) |
+| **Warehouse** | ![Google Cloud](https://img.shields.io/badge/BigQuery-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white) ![BigLake](https://img.shields.io/badge/BigLake-blue?style=for-the-badge) |
+| **Transformation** | ![dbt](https://img.shields.io/badge/dbt-%23FF694B.svg?style=for-the-badge&logo=dbt&logoColor=white) |
+| **Orchestration** | ![Apache Airflow](https://img.shields.io/badge/Airflow-%23017CEE.svg?style=for-the-badge&logo=Apache%20Airflow&logoColor=white) |
+| **CI/CD** | ![Google Cloud Build](https://img.shields.io/badge/Cloud_Build-grey?style=for-the-badge&logo=google-cloud&logoColor=white) ![GitHub](https://img.shields.io/badge/github-%23121011.svg?style=for-the-badge&logo=github&logoColor=white) |
+| **Governance** | ![Dataplex](https://img.shields.io/badge/Dataplex-blue?style=for-the-badge) ![Data Catalog](https://img.shields.io/badge/Data_Catalog-blue?style=for-the-badge) |
+| **Monitoring** | ![Google Cloud](https://img.shields.io/badge/Cloud_Monitoring-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white) |
+| **BI** | ![Looker Studio](https://img.shields.io/badge/Looker_Studio-%234285F4.svg?style=for-the-badge&logo=google-cloud&logoColor=white) |
+
+---
+
+## 🏗 Architecture
 
 ### Data flow (sources to BI)
 
@@ -23,6 +40,25 @@ Both staging layers are read by **dbt**, which builds a star schema
 (`dim_customers`, `dim_products`, `dim_date`, `fact_orders`, `fact_order_items`,
 `fact_payments`, `fact_clickstream_events`) plus a PII-safe reporting layer for
 BI consumption.
+
+## 📊 Observability & Insights
+
+### Platform Health Dashboard
+Monitoring the "Golden Signals" of the pipeline using Google Cloud Monitoring.
+![GCP Monitoring Dashboard](docs/monitoring_dashboard.png)
+*   **Pub/Sub Backlog:** Tracks undelivered messages to alert on pipeline stalls.
+*   **Dataflow System Lag:** Real-time visibility into processing latency.
+*   **BigQuery Usage:** Monitoring query volume and scanned bytes.
+*   **Composer Health:** Tracking DAG success/failure rates.
+
+
+### Business Analytics (Looker Studio)
+Final curated data served to stakeholders via a PII-safe reporting layer.
+![Looker Studio Dashboard](docs/looker_dashboard.png)
+![customer behavior Dashboard](docs/cus_behavior.png)
+*   **Conversion Funnel:** Visualizing the journey from `page_view` to `purchase`.
+*   **Sales Trends:** Daily revenue performance across product categories.
+*   **Customer Geography:** Global distribution of active retail users.
 
 ### Cross-cutting services
 
