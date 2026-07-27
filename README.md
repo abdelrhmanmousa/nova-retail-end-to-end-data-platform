@@ -26,10 +26,30 @@ BI consumption.
 
 ### Cross-cutting services
 
-![Cross-cutting services diagram](docs/cross_cutting_services.svg)
+![Cross-cutting services diagram](docs/cross_cutting_services.png)
 
 These six services don't sit in the linear data flow — they provision,
 orchestrate, build, monitor, and govern everything shown above.
+
+### CI/CD Pipeline
+![CI/CD diagram](docs/CI_CD_nova.png)
+
+Why, what, and how
+
+Why: Right now, every deploy step is manual — we run build_and_push.sh, run_pipeline.sh, gsutil cp for DAGs, terraform apply, by hand, from your terminal. CI/CD's job is to make git push alone trigger the right subset of that automatically.
+
+What Cloud Build will do on every push to main:
+
+Build and push the 3 Docker images (clickstream Dataflow pipeline, batch producers, dbt) to Artifact Registry
+Sync your dags/ folder to Composer's DAG bucket automatically (no more manual gsutil cp)
+Run terraform plan (not apply) so infra changes are visible in the build log
+
+Why plan, not apply, for Terraform specifically: This is a deliberate, defensible senior decision, not a shortcut. Auto-applying infrastructure changes on every push means a bad terraform edit could silently destroy/recreate real resources (a Cloud SQL instance, a BigQuery dataset with data in it) with no human in the loop. Rebuilding a Docker image or syncing a DAG file is safe and idempotent — nothing bad happens if it reruns. Terraform apply is not. Real production setups very commonly keep infra changes gated behind a human clicking "approve" even with full CI/CD elsewhere. We can upgrade to auto-apply later if you want, but I'd recommend against it for now.
+
+How, mechanically: A cloudbuild.yaml file at your repo root defines the steps. A Cloud Build Trigger watches your GitHub repo and runs that file on push. Cloud Build itself runs the steps under a service account (currently cloud-build-deployer, which we already created) with permissions scoped to exactly what each step needs
+
+
+
 
 ## Repository structure
 
