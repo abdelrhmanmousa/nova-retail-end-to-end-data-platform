@@ -3,6 +3,9 @@ version: 2
 models:
   - name: dim_customers
     description: "Customer dimension"
+    config:
+      persist_docs:
+        columns: true
     columns:
       - name: customer_key
         tests:
@@ -12,6 +15,10 @@ models:
         tests:
           - unique
           - not_null
+      - name: email
+        description: "Restricted PII: Customer Email Address"
+        policy_tags:
+          - "projects/project-19093238-3ff7-407b-9e3/locations/us-central1/taxonomies/5947565348443586105/policyTags/3592814445053674071"
 
   - name: dim_products
     description: "Product dimension, enriched with latest supplier stock/cost"
